@@ -50,11 +50,14 @@ protected:
 	void				StartRings		( bool chargeUp );
 	void				StopRings		( void );
 
+	float				range;																	//MOD1 ADDED: used for range calculation
+	void				Attack		( int );													//MOD1 ADDED: used to apply damage
+
 private:
 
 	stateResult_t		State_Idle		( const stateParms_t& parms );
 	stateResult_t		State_Fire		( const stateParms_t& parms );
-	stateResult_t		State_Reload	( const stateParms_t& parms );
+	//stateResult_t		State_Reload	( const stateParms_t& parms );
 	
 	CLASS_STATES_PROTOTYPE ( rvWeaponDarkMatterGun );
 };
@@ -100,6 +103,8 @@ void rvWeaponDarkMatterGun::Spawn ( void ) {
 	chargeDuration = SEC2MS ( spawnArgs.GetFloat ( "chargeDuration", ".5" ) );
 	
 	jointCore = viewModel->GetAnimator()->GetJointHandle ( spawnArgs.GetString ( "joint_core" ) );
+
+	range = spawnArgs.GetFloat("range", "32");															//MOD1 ADDED: Defined variable for range calculation
 }
 
 /*
@@ -118,6 +123,7 @@ void rvWeaponDarkMatterGun::Save ( idSaveGame *savefile ) const {
 	savefile->WriteObject( coreEffect.GetEntity() );
 	savefile->WriteObject( coreStartEffect.GetEntity() );
 	savefile->WriteJoint ( jointCore );
+	savefile->WriteFloat(range);														//MOD1 Added: save range value in save file
 }
 
 /*
@@ -136,6 +142,7 @@ void rvWeaponDarkMatterGun::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadObject( reinterpret_cast<idClass*&>( coreEffect ) );
 	savefile->ReadObject( reinterpret_cast<idClass*&>( coreStartEffect ) );
 	savefile->ReadJoint ( jointCore );
+	savefile->ReadFloat(range);															//MOD1 Added: save range value to restore weapon?
 }
 
 /*
@@ -229,6 +236,38 @@ void rvWeaponDarkMatterGun::StopRings ( void ) {
 	ringStartTime  = -1;
 }
 
+void rvWeaponDarkMatterGun::Attack(int nAT) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t		tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+
+
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
+}
+
 /*
 ===============================================================================
 
@@ -240,7 +279,7 @@ void rvWeaponDarkMatterGun::StopRings ( void ) {
 CLASS_STATES_DECLARATION ( rvWeaponDarkMatterGun )
 	STATE ( "Idle",				rvWeaponDarkMatterGun::State_Idle)
 	STATE ( "Fire",				rvWeaponDarkMatterGun::State_Fire )
-	STATE ( "Reload",			rvWeaponDarkMatterGun::State_Reload )
+	//STATE ( "Reload",			rvWeaponDarkMatterGun::State_Reload )						//MOD1 TAKEN: Not reloading involved
 END_CLASS_STATES
 
 /*
@@ -255,21 +294,28 @@ stateResult_t rvWeaponDarkMatterGun::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+
+			//MOD1 TAKEN: No ammo involved
+			/*
 			if ( !AmmoAvailable ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
 				SetStatus ( WP_READY );
 			}
+			
 
 			// Auto reload?
 			if ( !AmmoInClip ( ) && AmmoAvailable () && !clientReload ) {
 				SetState ( "reload", 2 );
 				return SRESULT_DONE;
 			}
+
 			clientReload = false;
 
 			StartRings ( false );
+			*/
 
+			SetStatus(WP_READY);															//MOD1 ADDED: Set weapon status to ready
 			PlayCycle( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
 			return SRESULT_STAGE ( STAGE_WAIT );
 		
@@ -279,7 +325,13 @@ stateResult_t rvWeaponDarkMatterGun::State_Idle( const stateParms_t& parms ) {
 				SetState ( "Lower", 4 );
 				return SRESULT_DONE;
 			}		
+			//MOD1 ADDED: Condition to set status to fire
+			if (wsfl.attack) {
+				SetState("Fire", 0);
+			}
 
+			//MOD1 TAKEN: Original conditions
+			/*
 			if ( gameLocal.time > nextAttackTime && wsfl.attack && AmmoInClip ( ) ) {
 				SetState ( "Fire", 0 );
 				return SRESULT_DONE;
@@ -293,6 +345,7 @@ stateResult_t rvWeaponDarkMatterGun::State_Idle( const stateParms_t& parms ) {
 					wsfl.netReload = false;
 				}
 			}
+			*/
 			
 			return SRESULT_WAIT;
 	}
@@ -311,10 +364,11 @@ stateResult_t rvWeaponDarkMatterGun::State_Fire ( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
-			StopRings ( );
+			gameLocal.Printf("Performing Attack!\n");
+			//StopRings ( ); //MOD1 TAKEN: stops the rings? 
 
 			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier(PMOD_FIRERATE));
-			Attack ( false, 25, 30, 0, 4.0f );
+			Attack(nextAttackTime);//MOD1 TAKEN: Original Attack ( false, 25, 30, 0, 4.0f );
 			PlayAnim ( ANIMCHANNEL_ALL, "fire", 0 );	
 			return SRESULT_STAGE ( STAGE_WAIT );
 	
@@ -322,7 +376,12 @@ stateResult_t rvWeaponDarkMatterGun::State_Fire ( const stateParms_t& parms ) {
 			if ( AnimDone ( ANIMCHANNEL_ALL, 2 ) || (gameLocal.isMultiplayer && gameLocal.time >= nextAttackTime) ) {
 				SetState ( "Idle", 0 );
 				return SRESULT_DONE;
-			}		
+			}
+			//MOD1 ADDED: condition to set attack state without waiting for reload to finish
+			if (wsfl.attack && gameLocal.time >= nextAttackTime) { //MOD1 TAKEN: add "&& AmmoClip()" after nextAttackTi
+				SetState("Fire", 0);
+				return SRESULT_DONE;
+			}
 			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
@@ -332,7 +391,7 @@ stateResult_t rvWeaponDarkMatterGun::State_Fire ( const stateParms_t& parms ) {
 ================
 rvWeaponDarkMatterGun::State_Reload
 ================
-*/
+
 stateResult_t rvWeaponDarkMatterGun::State_Reload ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -373,7 +432,8 @@ stateResult_t rvWeaponDarkMatterGun::State_Reload ( const stateParms_t& parms ) 
 	}
 	return SRESULT_ERROR;
 }
-			
+*/
+
 /*
 ===============================================================================
 

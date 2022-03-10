@@ -63,6 +63,9 @@ protected:
 	float								drumMultiplier;
 
 	virtual void		OnLaunchProjectile		( idProjectile* proj );
+
+	float					range;												//MOD1: range
+	void					Attack ( void );									//MOD1: Attack
 	
 private:
 
@@ -117,6 +120,8 @@ rvWeaponNailgun::Spawn
 ================
 */
 void rvWeaponNailgun::Spawn ( void ) {
+	//MOD1: Not using this
+	/*
 	spawnArgs.GetFloat ( "lockRange", "1000", guideRange );
 	guideHoldTime = SEC2MS ( spawnArgs.GetFloat ( "lockHoldTime", "10" ) );
 	guideAquireTime = SEC2MS ( spawnArgs.GetFloat ( "lockAquireTime", ".1" ) );
@@ -133,7 +138,10 @@ void rvWeaponNailgun::Spawn ( void ) {
 	drumMultiplier	= spawnArgs.GetFloat ( "drumSpeed" );
 	
 	ExecuteState ( "ClaspClose" );	
+	*/
+
 	SetState ( "Raise", 0 );	
+	range = spawnArgs.GetFloat("range", "32");//MOD1 ADDED: Defined variable for range calculation
 }
 
 /*
@@ -142,6 +150,8 @@ rvWeaponNailgun::Save
 ================
 */
 void rvWeaponNailgun::Save ( idSaveGame *savefile ) const {
+	//MOD1: Not using this
+	/*
 	guideEnt.Save( savefile );
 	savefile->WriteInt( guideTime );
 	savefile->WriteInt( guideStartTime );
@@ -160,6 +170,9 @@ void rvWeaponNailgun::Save ( idSaveGame *savefile ) const {
 	savefile->WriteInt ( drumSpeed );
 	savefile->WriteInt ( drumSpeedIdeal );
 	savefile->WriteFloat ( drumMultiplier );
+	*/
+
+	savefile->WriteFloat(range);		//MOD1: saving range
 }
 
 /*
@@ -168,6 +181,8 @@ rvWeaponNailgun::Restore
 ================
 */
 void rvWeaponNailgun::Restore ( idRestoreGame *savefile ) {
+	//MOD1: Not using this
+	/*
 	guideEnt.Restore( savefile );
 	savefile->ReadInt( guideTime );
 	savefile->ReadInt( guideStartTime );
@@ -187,6 +202,9 @@ void rvWeaponNailgun::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadInt ( drumSpeed );
 	savefile->ReadInt ( drumSpeedIdeal );
 	savefile->ReadFloat ( drumMultiplier );
+	*/
+
+	savefile->ReadFloat(range);		//MOD1: saving range
 }
 
 /*
@@ -195,7 +213,8 @@ rvWeaponNailgun::PreSave
 ================
 */
 void rvWeaponNailgun::PreSave ( void ) {
-
+	//MOD1: not using this
+	/*
 	//disable sounds
 	StopSound( SND_CHANNEL_ANY, false);
 
@@ -205,6 +224,7 @@ void rvWeaponNailgun::PreSave ( void ) {
 		guideEffect->Event_Remove();
 		guideEffect = NULL;
 	}
+	*/
 }
 
 /*
@@ -213,7 +233,8 @@ rvWeaponNailgun::PostSave
 ================
 */
 void rvWeaponNailgun::PostSave ( void ) {
-
+	//MOD1: Not using this
+	/*
 	//restore sounds-- but which one?
 	if( drumSpeed == NAILGUN_DRUMSPEED_FAST )	{
 		viewModel->StartSound ( "snd_spinfast", NAILGUN_SPIN_SNDCHANNEL, 0, false, NULL );		
@@ -222,6 +243,44 @@ void rvWeaponNailgun::PostSave ( void ) {
 	}
 
 	//the guide gui effect will restore itself naturally
+	*/
+}
+
+/*
+================
+rvWeaponNailgun::Attack
+================
+*/
+void rvWeaponNailgun::Attack ( void ) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t	tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+
+
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
 }
 
 /*
@@ -484,16 +543,16 @@ bool rvWeaponNailgun::DrumSpin ( int speed, int blendFrames ) {
 */
 
 CLASS_STATES_DECLARATION ( rvWeaponNailgun )
-	STATE ( "Raise",						rvWeaponNailgun::State_Raise )
-	STATE ( "Lower",						rvWeaponNailgun::State_Lower )
+	//STATE ( "Raise",						rvWeaponNailgun::State_Raise )
+	//STATE ( "Lower",						rvWeaponNailgun::State_Lower )
 	STATE ( "Idle",							rvWeaponNailgun::State_Idle)
 	STATE ( "Fire",							rvWeaponNailgun::State_Fire )
-	STATE ( "Reload",						rvWeaponNailgun::State_Reload )
-	STATE ( "DrumSpinDown",					rvWeaponNailgun::State_DrumSpinDown )
-	STATE ( "DrumSpinUp",					rvWeaponNailgun::State_DrumSpinUp )
+	//STATE ( "Reload",						rvWeaponNailgun::State_Reload )
+	//STATE ( "DrumSpinDown",					rvWeaponNailgun::State_DrumSpinDown )
+	//STATE ( "DrumSpinUp",					rvWeaponNailgun::State_DrumSpinUp )
 	
-	STATE ( "ClaspOpen",					rvWeaponNailgun::Frame_ClaspOpen )
-	STATE ( "ClaspClose",					rvWeaponNailgun::Frame_ClaspClose )
+	//STATE ( "ClaspOpen",					rvWeaponNailgun::Frame_ClaspOpen )
+	//STATE ( "ClaspClose",					rvWeaponNailgun::Frame_ClaspClose )
 END_CLASS_STATES
 
 /*
@@ -502,7 +561,7 @@ rvWeaponNailgun::State_Raise
 
 Raise the weapon
 ================
-*/
+
 stateResult_t rvWeaponNailgun::State_Raise ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -529,6 +588,7 @@ stateResult_t rvWeaponNailgun::State_Raise ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -536,7 +596,7 @@ rvWeaponNailgun::State_Lower
 
 Lower the weapon
 ================
-*/
+
 stateResult_t rvWeaponNailgun::State_Lower ( const stateParms_t& parms ) {	
 	enum {
 		STAGE_INIT,
@@ -568,6 +628,7 @@ stateResult_t rvWeaponNailgun::State_Lower ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -583,6 +644,8 @@ stateResult_t rvWeaponNailgun::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+			//Original STAGE_INIT
+			/*
 			if ( !AmmoInClip ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
@@ -596,8 +659,15 @@ stateResult_t rvWeaponNailgun::State_Idle( const stateParms_t& parms ) {
 				
 			PlayCycle( ANIMCHANNEL_LEGS, "idle", parms.blendFrames );
 			return SRESULT_STAGE ( STAGE_WAIT );
+			*/
+
+			//MOD1
+			SetStatus(WP_READY);
+			return SRESULT_STAGE(STAGE_WAIT);
 
 		case STAGE_WAIT:
+			//Original STAGE_WAIT
+			/*
 			if ( wsfl.lowerWeapon ) {
 				SetState ( "Lower", 4 );
 				return SRESULT_DONE;
@@ -622,6 +692,19 @@ stateResult_t rvWeaponNailgun::State_Idle( const stateParms_t& parms ) {
 					return SRESULT_DONE;			
 				}				
 			}
+			
+			return SRESULT_WAIT;
+			*/
+
+			//MOD1
+			if (wsfl.lowerWeapon) {
+				SetState("Lower", 4);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack) {
+				SetState("Fire", 0);
+				return SRESULT_DONE; //if crash then take out
+			}
 			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
@@ -637,12 +720,15 @@ Fire the weapon
 stateResult_t rvWeaponNailgun::State_Fire( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
-		STAGE_FIRE,
-		STAGE_FIREWAIT,
-		STAGE_DONE,
-		STAGE_SPINEMPTY,		
+		//STAGE_FIRE,
+		//STAGE_FIREWAIT,
+		//STAGE_DONE,
+		//STAGE_SPINEMPTY,	
+		STAGE_WAIT,
 	};	
 	switch ( parms.stage ) {
+		//ORIGINAL CASES
+		/*
 		case STAGE_INIT:
 			if ( !wsfl.attack ) {
 				SetState ( "Idle", parms.blendFrames );				
@@ -710,6 +796,31 @@ stateResult_t rvWeaponNailgun::State_Fire( const stateParms_t& parms ) {
 				return SRESULT_STAGE ( STAGE_DONE );
 			}
 			return SRESULT_WAIT;
+
+			*/
+
+		//MOD1
+		case STAGE_INIT:
+			gameLocal.Printf("Performing Attack\n");
+			//nextAttackTime was here
+			//Attack(false, hitscans, spread, 0, 1.0f);//Will not be using hitscans
+			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier(PMOD_FIRERATE));
+			Attack( );
+			//MOD1 ADDED END
+			//PlayAnim(ANIMCHANNEL_ALL, "fire", 0);	//MOD1: taken out
+			return SRESULT_STAGE(STAGE_WAIT);
+
+		case STAGE_WAIT:
+			if ((!gameLocal.isMultiplayer) && wsfl.lowerWeapon) {
+				SetState("Idle", 0);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack && gameLocal.time >= nextAttackTime) {
+				SetState("Fire", 0);
+				return SRESULT_DONE;
+			}
+			
+			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
 }
@@ -718,7 +829,7 @@ stateResult_t rvWeaponNailgun::State_Fire( const stateParms_t& parms ) {
 ================
 rvWeaponNailgun::State_Reload
 ================
-*/
+
 stateResult_t rvWeaponNailgun::State_Reload ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -818,6 +929,7 @@ stateResult_t rvWeaponNailgun::State_Reload ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -825,7 +937,7 @@ rvWeaponNailgun::State_DrumSpinUp
 
 Spin the drum from a slow speed to a fast speed
 ================
-*/
+
 stateResult_t rvWeaponNailgun::State_DrumSpinUp ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -853,6 +965,7 @@ stateResult_t rvWeaponNailgun::State_DrumSpinUp ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -860,7 +973,7 @@ rvWeaponNailgun::State_DrumSpinDown
 
 Spin the drum down from a faster speed
 ================
-*/
+
 stateResult_t rvWeaponNailgun::State_DrumSpinDown ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -897,6 +1010,7 @@ stateResult_t rvWeaponNailgun::State_DrumSpinDown ( const stateParms_t& parms ) 
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -904,11 +1018,12 @@ rvWeaponNailgun::Frame_ClaspOpen
 
 Open the clasp that holds in the clips
 ================
-*/
+
 stateResult_t rvWeaponNailgun::Frame_ClaspOpen ( const stateParms_t& parms ) {
 	PlayAnim ( ANIMCHANNEL_TORSO, "clasp_open", 0 );
 	return SRESULT_OK;
 }
+*/
 
 /*
 ================
@@ -918,7 +1033,7 @@ Close the clasp that holds in the clips and make sure to use the
 correct positioning depending on whether you have one or two clips
 in the gun.
 ================
-*/
+
 stateResult_t rvWeaponNailgun::Frame_ClaspClose ( const stateParms_t& parms ) {
 	if ( mods & NAILGUN_MOD_ROF_AMMO ) {
 		PlayAnim( ANIMCHANNEL_TORSO, "clasp_2clip", 0 );
@@ -927,3 +1042,4 @@ stateResult_t rvWeaponNailgun::Frame_ClaspClose ( const stateParms_t& parms ) {
 	}
 	return SRESULT_OK;
 }
+*/

@@ -50,6 +50,7 @@ public:
 protected:
 
 	void					UpdateTubes	( void );
+	void					MAttack ( int );													//MOD1: Attack function
 
 	// Tube effects
 	rvClientEntityPtr<rvClientEffect>	tubeEffects[LIGHTNINGGUN_NUM_TUBES];
@@ -63,7 +64,7 @@ protected:
 
 	int									nextCrawlTime;
 
-	float								range;
+	float								range;												//MOD1: already defined
 	jointHandle_t						spireJointView;
 	jointHandle_t						chestJointView;
 	
@@ -73,6 +74,8 @@ protected:
 	// Chain lightning mod
 	idList<rvLightningPath>				chainLightning;
 	idVec3								chainLightningRange;
+
+
 
 private:
 
@@ -140,7 +143,7 @@ void rvWeaponLightningGun::Spawn( void ) {
 	chainLightning.Clear( );
 	
 	// get hitscan range for our firing
-	range = weaponDef->dict.GetFloat( "range", "10000" );
+	range = spawnArgs.GetFloat("range", "32"); //MOD1: Original range = weaponDef->dict.GetFloat( "range", "10000" );
 
 	// Initialize tubes
 	for ( i = 0; i < LIGHTNINGGUN_NUM_TUBES; i ++ ) {
@@ -359,6 +362,44 @@ void rvWeaponLightningGun::Attack ( idEntity* ent, const idVec3& dir, float powe
 	}
 // RAVEN END
 	ent->Damage( owner, owner, dir, spawnArgs.GetString ( "def_damage" ), power * owner->PowerUpModifier( PMOD_PROJECTILE_DAMAGE ), 0 );
+}
+
+
+/*
+================
+rvWeaponLightningGun::MAttack
+================
+*/
+void rvWeaponLightningGun::MAttack(int nAT) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t		tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+
+
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
 }
 
 /*
@@ -694,8 +735,8 @@ void rvWeaponLightningGun::UpdateTubes( void ) {
 */
 
 CLASS_STATES_DECLARATION ( rvWeaponLightningGun )
-	STATE ( "Raise",						rvWeaponLightningGun::State_Raise )
-	STATE ( "Lower",						rvWeaponLightningGun::State_Lower )
+	//STATE ( "Raise",						rvWeaponLightningGun::State_Raise ) //MOD1 EDIT: Not raising weapon
+	//STATE ( "Lower",						rvWeaponLightningGun::State_Lower ) //MOD1 EDIT: Not lowing weapon
 	STATE ( "Idle",							rvWeaponLightningGun::State_Idle)
 	STATE ( "Fire",							rvWeaponLightningGun::State_Fire )
 END_CLASS_STATES
@@ -704,7 +745,7 @@ END_CLASS_STATES
 ================
 rvWeaponLightningGun::State_Raise
 ================
-*/
+
 stateResult_t rvWeaponLightningGun::State_Raise( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -734,12 +775,13 @@ stateResult_t rvWeaponLightningGun::State_Raise( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
 rvWeaponLightningGun::State_Lower
 ================
-*/
+
 stateResult_t rvWeaponLightningGun::State_Lower( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -768,6 +810,7 @@ stateResult_t rvWeaponLightningGun::State_Lower( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -783,8 +826,8 @@ stateResult_t rvWeaponLightningGun::State_Idle( const stateParms_t& parms ) {
 		case STAGE_INIT:
 			SetStatus( WP_READY );
 			PlayCycle( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
-			StopSound( SND_CHANNEL_BODY3, false );
-			StartSound( "snd_idle_hum", SND_CHANNEL_BODY3, 0, false, NULL );
+			//StopSound( SND_CHANNEL_BODY3, false );													//MOD1: Taken out | possible used in taken states
+			//StartSound( "snd_idle_hum", SND_CHANNEL_BODY3, 0, false, NULL );							//MOD1: Not playing any sound yet
 
 			return SRESULT_STAGE( STAGE_WAIT );
 		
@@ -794,9 +837,9 @@ stateResult_t rvWeaponLightningGun::State_Idle( const stateParms_t& parms ) {
 				SetState( "Lower", 4 );
 				return SRESULT_DONE;
 			}
-			if ( wsfl.attack && gameLocal.time > nextAttackTime && AmmoAvailable ( ) ) {
-				SetState( "Fire", 4 );
-				return SRESULT_DONE;
+			if ( wsfl.attack && gameLocal.time > nextAttackTime ) { //MOD1: OG wsfl.attack && gameLocal.time > nextAttackTime && AmmoAvailable ( )
+				SetState( "Fire", 0 );								//MOD1: OG SetState( "Fire", 4 );	
+				return SRESULT_DONE;								//MOD1: If break then take out
 			}
 			return SRESULT_WAIT;
 	}
@@ -811,11 +854,14 @@ rvWeaponLightningGun::State_Fire
 stateResult_t rvWeaponLightningGun::State_Fire( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
-		STAGE_ATTACKLOOP,
-		STAGE_DONE,
-		STAGE_DONEWAIT
+		STAGE_WAIT,						//MOD1: Added for attack
+		STAGE_ATTACKLOOP,				//MOD1: Not considered
+		STAGE_DONE,						//MOD1: Not considered
+		STAGE_DONEWAIT					//MOD1: Not considered
 	};	
 	switch ( parms.stage ) {
+		//Original Code
+		/*
 		case STAGE_INIT:
 			StartSound( "snd_fire", SND_CHANNEL_WEAPON, 0, false, NULL );
 			StartSound( "snd_fire_stereo", SND_CHANNEL_ITEM, 0, false, NULL );
@@ -869,8 +915,35 @@ stateResult_t rvWeaponLightningGun::State_Fire( const stateParms_t& parms ) {
 				return SRESULT_DONE;
 			}
 			return SRESULT_WAIT;
+
+			*/
+
+		//MOD1 Chunk
+	case STAGE_INIT:
+		gameLocal.Printf("Performing Attack!\n");
+		//nextAttackTime was here
+		//Attack(false, hitscans, spread, 0, 1.0f);//Will not be using hitscans
+		nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier(PMOD_FIRERATE));
+		MAttack(nextAttackTime);
+		//MOD1 ADDED END
+		//PlayAnim(ANIMCHANNEL_ALL, "fire", 0);														//MOD1: Removed to not confuse with ray being fired
+		return SRESULT_STAGE(STAGE_WAIT);
+
+	case STAGE_WAIT:
+		if ((!gameLocal.isMultiplayer && (wsfl.lowerWeapon || AnimDone(ANIMCHANNEL_ALL, 0))) || AnimDone(ANIMCHANNEL_ALL, 0)) {
+			SetState("Idle", 0);
+			return SRESULT_DONE;
+		}
+		if (wsfl.attack && gameLocal.time >= nextAttackTime) { //MOD1 TAKEN: add "&& AmmoClip()" after nextAttackTi
+			SetState("Fire", 0);
+			return SRESULT_DONE;
+		}
+		
+		return SRESULT_WAIT;
 	}
+	
 	return SRESULT_ERROR;
+
 }
 
 

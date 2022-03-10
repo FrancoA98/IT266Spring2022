@@ -26,11 +26,14 @@ protected:
 	bool				UpdateFlashlight	( void );
 	void				Flashlight			( bool on );
 
+	float					range;																		//MOD1: range variable
+	void					Attack			( void );													//MOD1: Attack function
+
 private:
 
 	stateResult_t		State_Idle			( const stateParms_t& parms );
 	stateResult_t		State_Fire			( const stateParms_t& parms );
-	stateResult_t		State_Reload		( const stateParms_t& parms );
+	//stateResult_t		State_Reload		( const stateParms_t& parms );
 	stateResult_t		State_Flashlight	( const stateParms_t& parms );
 
 	CLASS_STATES_PROTOTYPE ( rvWeaponMachinegun );
@@ -57,7 +60,7 @@ void rvWeaponMachinegun::Spawn ( void ) {
 	fireHeld   = false;
 		
 	SetState ( "Raise", 0 );	
-	
+	range = spawnArgs.GetFloat("range", "32");															//MOD1: Defined variable for range calculation
 	Flashlight ( owner->IsFlashlightOn() );
 }
 
@@ -69,6 +72,7 @@ rvWeaponMachinegun::Save
 void rvWeaponMachinegun::Save ( idSaveGame *savefile ) const {
 	savefile->WriteFloat ( spreadZoom );
 	savefile->WriteBool ( fireHeld );
+	savefile->WriteFloat(range);																		//MOD1: Saving range value
 }
 
 /*
@@ -79,6 +83,7 @@ rvWeaponMachinegun::Restore
 void rvWeaponMachinegun::Restore ( idRestoreGame *savefile ) {
 	savefile->ReadFloat ( spreadZoom );
 	savefile->ReadBool ( fireHeld );
+	savefile->ReadFloat(range);																			//MOD1: Restoring range
 }
 
 /*
@@ -97,6 +102,42 @@ rvWeaponMachinegun::PostSave
 void rvWeaponMachinegun::PostSave ( void ) {
 }
 
+/*
+================
+rvWeaponMachinegun::Attack
+================
+*/
+void rvWeaponMachinegun::Attack ( void ) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t	tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+
+
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
+}
 
 /*
 ================
@@ -153,7 +194,7 @@ void rvWeaponMachinegun::Flashlight ( bool on ) {
 CLASS_STATES_DECLARATION ( rvWeaponMachinegun )
 	STATE ( "Idle",				rvWeaponMachinegun::State_Idle)
 	STATE ( "Fire",				rvWeaponMachinegun::State_Fire )
-	STATE ( "Reload",			rvWeaponMachinegun::State_Reload )
+	//STATE ( "Reload",			rvWeaponMachinegun::State_Reload )											//MOD1: Removed reload
 	STATE ( "Flashlight",		rvWeaponMachinegun::State_Flashlight )
 END_CLASS_STATES
 
@@ -228,17 +269,17 @@ stateResult_t rvWeaponMachinegun::State_Fire ( const stateParms_t& parms ) {
 		case STAGE_INIT:
 			if ( wsfl.zoom ) {
 				nextAttackTime = gameLocal.time + (altFireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-				Attack ( true, 1, spreadZoom, 0, 1.0f );
-				fireHeld = true;
+				Attack ( );	//MOD1: Original Attack ( true, 1, spreadZoom, 0, 1.0f );
+				//fireHeld = true; //MOD1: removed
 			} else {
 				nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-				Attack ( false, 1, spread, 0, 1.0f );
+				Attack ( ); //MOD1: Original Attack ( false, 1, spread, 0, 1.0f );
 			}
-			PlayAnim ( ANIMCHANNEL_ALL, "fire", 0 );	
+			PlayAnim(ANIMCHANNEL_ALL, "fire", 0);
 			return SRESULT_STAGE ( STAGE_WAIT );
 	
 		case STAGE_WAIT:		
-			if ( !fireHeld && wsfl.attack && gameLocal.time >= nextAttackTime && AmmoInClip() && !wsfl.lowerWeapon ) {
+			if ( wsfl.attack && gameLocal.time >= nextAttackTime && !wsfl.lowerWeapon ) { //MOD1: Original !fireHeld && wsfl.attack && gameLocal.time >= nextAttackTime && AmmoInClip() && !wsfl.lowerWeapon
 				SetState ( "Fire", 0 );
 				return SRESULT_DONE;
 			}
@@ -258,7 +299,7 @@ stateResult_t rvWeaponMachinegun::State_Fire ( const stateParms_t& parms ) {
 ================
 rvWeaponMachinegun::State_Reload
 ================
-*/
+
 stateResult_t rvWeaponMachinegun::State_Reload ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -290,7 +331,7 @@ stateResult_t rvWeaponMachinegun::State_Reload ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
-			
+*/
 
 /*
 ================
