@@ -177,6 +177,77 @@ void Cmd_ListSpawnArgs_f( const idCmdArgs &args ) {
 
 /*
 ===================
+MOD2
+Cmd_Evelyn_f
+===================
+*/
+void Cmd_Evelyn_f(const idCmdArgs& args) {
+	/*
+	Supposed to be off-hand weapon.
+	Thus, Find entity where we aim with constant range and apply effect
+	Base this in damage application to entities
+	*/
+
+	trace_t		tr;														//MOD2: trace variable | still not fully understand what it does
+	idEntity* ent;														//MOD2: The entity we are targetting
+	idPlayer* hunter;													//MOD2: The player entity | called hunter for my mental sanity
+	idVec3	playerViewOrigin;											//MOD2: START from where player is looking
+	idMat3	playerViewAxis;												//MOD2: Used to mark the END | added with range
+	float range;														//MOD2: range for status application
+	int stunRate;														//MOD2: to be applied to current time
+	int wakeUpTime;														//MOD2: to defined when the entity wakes up
+	int compare;
+		
+
+	//Define variables
+	hunter = gameLocal.GetLocalPlayer();
+	playerViewOrigin = hunter->firstPersonViewOrigin;					//MOD2: Original view of player?
+	playerViewAxis = hunter->firstPersonViewAxis;						//MOD2: The axis part | still not fully comprehended
+	range = 100;														//MOD2: range definition | no def file
+	stunRate = 2;													//MOD2: rate to apply to current time
+
+	gameLocal.TracePoint(hunter, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, hunter);
+
+	ent = gameLocal.entities[tr.c.entityNum]; //MOD2: Definition of the entity within range
+
+	//Apply the statuss effect
+	//DEBUG GOAL | Success
+	//Original GOAL | STUN the enemy
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("ENTITY NAME: %s\n", ent->GetName());
+		//Damage application to entity
+		/*
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+		*/
+		//Check if the entity is active
+		if (ent->IsActive()) {
+			//If the entity can go dormant
+			//compare = ent->thinkFlags;
+			ent->BecomeInactive(ent->thinkFlags);//Makes the entity not move
+
+			//COULD NOT IMPLEMENT TIME
+
+		}
+		else {
+			//The entity is inactive
+			gameLocal.Printf("ENTITY ALREADY STUNNED\n");
+		}
+	}
+	else {
+		gameLocal.Printf("NO ENTITY DETECTED\n");
+	}
+}
+
+
+/*
+===================
 Cmd_ReloadScript_f
 ===================
 */
@@ -3090,6 +3161,7 @@ void idGameLocal::InitConsoleCommands( void ) {
 	cmdSystem->AddCommand( "listLines",				Cmd_ListDebugLines_f,		CMD_FL_GAME|CMD_FL_CHEAT,	"lists all debug lines" );
 	cmdSystem->AddCommand( "playerModel",			Cmd_PlayerModel_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"sets the given model on the player", idCmdSystem::ArgCompletion_Decl<DECL_MODELDEF> );
 	cmdSystem->AddCommand( "flashlight",			Cmd_Flashlight_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"toggle actor's flashlight", idGameLocal::ArgCompletion_AIName );
+	cmdSystem->AddCommand( "evelyn",				Cmd_Evelyn_f,				CMD_FL_GAME|CMD_FL_CHEAT,	"fires evelyn and hits entity in path" );
 	
 	cmdSystem->AddCommand( "shuffleTeams",			Cmd_ShuffleTeams_f,			CMD_FL_GAME,				"shuffle teams" );
 // RAVEN BEGIN
