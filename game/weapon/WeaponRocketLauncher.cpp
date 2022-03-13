@@ -18,7 +18,7 @@ public:
 	~rvWeaponRocketLauncher ( void );
 
 	virtual void			Spawn				( void );
-	virtual void			Think				( void );
+	//virtual void			Think				( void ); //MOD1: taken out
 
 	void					Save( idSaveGame *saveFile ) const;
 	void					Restore( idRestoreGame *saveFile );
@@ -26,12 +26,16 @@ public:
 	void					PostSave			( void );
 
 
+	/*
 #ifdef _XENON
 	virtual bool		AllowAutoAim			( void ) const { return false; }
 #endif
+	*/
 
 protected:
 
+	//MOD1: taken out
+	/*
 	virtual void			OnLaunchProjectile	( idProjectile* proj );
 
 	void					SetRocketState		( const char* state, int blendFrames );
@@ -42,24 +46,30 @@ protected:
 	float								guideSpeedFast;
 	float								guideRange;
 	float								guideAccelTime;
+	
 
 	rvStateThread						rocketThread;
 
-	float								reloadRate;
+	*/
 
-	bool								idleEmpty;
+	//float								reloadRate;
+	
+	//bool								idleEmpty;
+
+	float								range;			//MOD1: range
+	void								Attack ( );		//MOD1: attack function
 
 private:
 
 	stateResult_t		State_Idle				( const stateParms_t& parms );
 	stateResult_t		State_Fire				( const stateParms_t& parms );
-	stateResult_t		State_Raise				( const stateParms_t& parms );
-	stateResult_t		State_Lower				( const stateParms_t& parms );
+	//stateResult_t		State_Raise				( const stateParms_t& parms );	//MOD1: taken out
+	//stateResult_t		State_Lower				( const stateParms_t& parms );	//MOD1: taken out
 	
-	stateResult_t		State_Rocket_Idle		( const stateParms_t& parms );
-	stateResult_t		State_Rocket_Reload		( const stateParms_t& parms );
+	//stateResult_t		State_Rocket_Idle		( const stateParms_t& parms );	//MOD1: taken out
+	//stateResult_t		State_Rocket_Reload		( const stateParms_t& parms );	//MOD1: taken out
 	
-	stateResult_t		Frame_AddToClip			( const stateParms_t& parms );
+	//stateResult_t		Frame_AddToClip			( const stateParms_t& parms );	//MOD1: taken out
 	
 	CLASS_STATES_PROTOTYPE ( rvWeaponRocketLauncher );
 };
@@ -81,10 +91,13 @@ rvWeaponRocketLauncher::~rvWeaponRocketLauncher
 ================
 */
 rvWeaponRocketLauncher::~rvWeaponRocketLauncher ( void ) {
+	/*
 	if ( guideEffect ) {
 		guideEffect->Stop();
 	}
+	*/
 }
+
 
 /*
 ================
@@ -92,6 +105,8 @@ rvWeaponRocketLauncher::Spawn
 ================
 */
 void rvWeaponRocketLauncher::Spawn ( void ) {
+	//ORIGINAL
+	/*
 	float f;
 
 	idleEmpty = false;
@@ -130,13 +145,18 @@ void rvWeaponRocketLauncher::Spawn ( void ) {
 
 	SetState ( "Raise", 0 );	
 	SetRocketState ( "Rocket_Idle", 0 );
+	*/
+
+	//MOD1
+	SetState("Raise", 0);
+	range = spawnArgs.GetFloat("range", "32");//MOD1 ADDED: Defined variable for range calculation
 }
 
 /*
 ================
 rvWeaponRocketLauncher::Think
 ================
-*/
+
 void rvWeaponRocketLauncher::Think ( void ) {	
 	trace_t	tr;
 	int		i;
@@ -204,12 +224,13 @@ void rvWeaponRocketLauncher::Think ( void ) {
 		guideEffect->SetAxis ( tr.c.normal.ToMat3() );
 	}
 }
+*/
 
 /*
 ================
 rvWeaponRocketLauncher::OnLaunchProjectile
 ================
-*/
+
 void rvWeaponRocketLauncher::OnLaunchProjectile ( idProjectile* proj ) {
 	rvWeapon::OnLaunchProjectile(proj);
 
@@ -223,15 +244,17 @@ void rvWeaponRocketLauncher::OnLaunchProjectile ( idProjectile* proj ) {
 	ptr = proj;
 	guideEnts.Append ( ptr );	
 }
+*/
 
 /*
 ================
 rvWeaponRocketLauncher::SetRocketState
 ================
-*/
+
 void rvWeaponRocketLauncher::SetRocketState ( const char* state, int blendFrames ) {
 	rocketThread.SetState ( state, blendFrames );
 }
+*/
 
 /*
 =====================
@@ -239,6 +262,8 @@ rvWeaponRocketLauncher::Save
 =====================
 */
 void rvWeaponRocketLauncher::Save( idSaveGame *saveFile ) const {
+	//ORIGINAL CODE
+	/*
 	saveFile->WriteObject( guideEffect );
 
 	idEntity* ent = NULL;
@@ -258,6 +283,10 @@ void rvWeaponRocketLauncher::Save( idSaveGame *saveFile ) const {
 	saveFile->WriteFloat ( reloadRate );
 	
 	rocketThread.Save( saveFile );
+	*/
+
+	//MOD1
+	saveFile->WriteFloat(range);//MOD1 ADDED: Added range value to the save file
 }
 
 /*
@@ -266,6 +295,7 @@ rvWeaponRocketLauncher::Restore
 =====================
 */
 void rvWeaponRocketLauncher::Restore( idRestoreGame *saveFile ) {
+	/*
 	int numEnts = 0;
 	idEntity* ent = NULL;
 	rvClientEffect* clientEffect = NULL;
@@ -288,7 +318,10 @@ void rvWeaponRocketLauncher::Restore( idRestoreGame *saveFile ) {
 	
 	saveFile->ReadFloat ( reloadRate );
 	
-	rocketThread.Restore( saveFile, this );	
+	rocketThread.Restore( saveFile, this );
+	*/
+
+	saveFile->ReadFloat(range);
 }
 
 /*
@@ -307,6 +340,37 @@ rvWeaponRocketLauncher::PostSave
 void rvWeaponRocketLauncher::PostSave ( void ) {
 }
 
+void rvWeaponRocketLauncher::Attack ( void ) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t	tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+
+
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
+}
 
 /*
 ===============================================================================
@@ -319,13 +383,13 @@ void rvWeaponRocketLauncher::PostSave ( void ) {
 CLASS_STATES_DECLARATION ( rvWeaponRocketLauncher )
 	STATE ( "Idle",				rvWeaponRocketLauncher::State_Idle)
 	STATE ( "Fire",				rvWeaponRocketLauncher::State_Fire )
-	STATE ( "Raise",			rvWeaponRocketLauncher::State_Raise )
-	STATE ( "Lower",			rvWeaponRocketLauncher::State_Lower )
+	//STATE ( "Raise",			rvWeaponRocketLauncher::State_Raise )
+	//STATE ( "Lower",			rvWeaponRocketLauncher::State_Lower )
 
-	STATE ( "Rocket_Idle",		rvWeaponRocketLauncher::State_Rocket_Idle )
-	STATE ( "Rocket_Reload",	rvWeaponRocketLauncher::State_Rocket_Reload )
+	//STATE ( "Rocket_Idle",		rvWeaponRocketLauncher::State_Rocket_Idle )
+	//STATE ( "Rocket_Reload",	rvWeaponRocketLauncher::State_Rocket_Reload )
 	
-	STATE ( "AddToClip",		rvWeaponRocketLauncher::Frame_AddToClip )
+	//STATE ( "AddToClip",		rvWeaponRocketLauncher::Frame_AddToClip )
 END_CLASS_STATES
 
 
@@ -335,7 +399,7 @@ rvWeaponRocketLauncher::State_Raise
 
 Raise the weapon
 ================
-*/
+
 stateResult_t rvWeaponRocketLauncher::State_Raise ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -361,6 +425,7 @@ stateResult_t rvWeaponRocketLauncher::State_Raise ( const stateParms_t& parms ) 
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -368,7 +433,7 @@ rvWeaponRocketLauncher::State_Lower
 
 Lower the weapon
 ================
-*/
+
 stateResult_t rvWeaponRocketLauncher::State_Lower ( const stateParms_t& parms ) {	
 	enum {
 		STAGE_INIT,
@@ -397,6 +462,7 @@ stateResult_t rvWeaponRocketLauncher::State_Lower ( const stateParms_t& parms ) 
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -410,6 +476,8 @@ stateResult_t rvWeaponRocketLauncher::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+			//ORIGINAL CODE
+			/*
 			if ( !AmmoAvailable ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
@@ -418,8 +486,16 @@ stateResult_t rvWeaponRocketLauncher::State_Idle( const stateParms_t& parms ) {
 		
 			PlayCycle( ANIMCHANNEL_LEGS, "idle", parms.blendFrames );
 			return SRESULT_STAGE ( STAGE_WAIT );
-		
+			*/
+
+			//MOD1
+			SetStatus(WP_READY);
+			PlayCycle(ANIMCHANNEL_ALL, "idle", parms.blendFrames);
+			return SRESULT_STAGE(STAGE_WAIT);
+
 		case STAGE_WAIT:
+			//ORIGINAL CODE
+			/*
 			if ( wsfl.lowerWeapon ) {
 				SetState ( "Lower", 4 );
 				return SRESULT_DONE;
@@ -427,6 +503,17 @@ stateResult_t rvWeaponRocketLauncher::State_Idle( const stateParms_t& parms ) {
 			if ( gameLocal.time > nextAttackTime && wsfl.attack && ( gameLocal.isClient || AmmoInClip ( ) ) ) {
 				SetState ( "Fire", 2 );
 				return SRESULT_DONE;
+			}
+			return SRESULT_WAIT;
+			*/
+
+			//MOD1
+			if (wsfl.lowerWeapon) {
+				SetState("Lower", 4);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack) {
+				SetState("Fire", 0);
 			}
 			return SRESULT_WAIT;
 	}
@@ -446,12 +533,13 @@ stateResult_t rvWeaponRocketLauncher::State_Fire ( const stateParms_t& parms ) {
 	switch ( parms.stage ) {
 		case STAGE_INIT:
 			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));		
-			Attack ( false, 1, spread, 0, 1.0f );
+			//Attack ( false, 1, spread, 0, 1.0f ); //MOD1: removed
+			Attack ( );
 			PlayAnim ( ANIMCHANNEL_LEGS, "fire", parms.blendFrames );	
 			return SRESULT_STAGE ( STAGE_WAIT );
 	
 		case STAGE_WAIT:			
-			if ( wsfl.attack && gameLocal.time >= nextAttackTime && ( gameLocal.isClient || AmmoInClip ( ) ) && !wsfl.lowerWeapon ) {
+			if ( wsfl.attack && gameLocal.time >= nextAttackTime && (gameLocal.isClient && !wsfl.lowerWeapon) ) { //MOD1: OG  wsfl.attack && gameLocal.time >= nextAttackTime && ( gameLocal.isClient || AmmoInClip ( ) ) && !wsfl.lowerWeapon 
 				SetState ( "Fire", 0 );
 				return SRESULT_DONE;
 			}
@@ -468,7 +556,7 @@ stateResult_t rvWeaponRocketLauncher::State_Fire ( const stateParms_t& parms ) {
 ================
 rvWeaponRocketLauncher::State_Rocket_Idle
 ================
-*/
+
 stateResult_t rvWeaponRocketLauncher::State_Rocket_Idle ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -509,12 +597,13 @@ stateResult_t rvWeaponRocketLauncher::State_Rocket_Idle ( const stateParms_t& pa
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
 rvWeaponRocketLauncher::State_Rocket_Reload
 ================
-*/
+
 stateResult_t rvWeaponRocketLauncher::State_Rocket_Reload ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -556,28 +645,29 @@ stateResult_t rvWeaponRocketLauncher::State_Rocket_Reload ( const stateParms_t& 
 				}
 				return SRESULT_DONE;
 			}
-			/*
-			if ( gameLocal.isMultiplayer && gameLocal.time > nextAttackTime && wsfl.attack ) {
-				if ( AmmoInClip ( ) == 0 )
-				{
-					AddToClip ( ClipSize() );
-				}
-				SetRocketState ( "Rocket_Idle", 0 );
-				return SRESULT_DONE;
-			}
-			*/
+			
+			//if ( gameLocal.isMultiplayer && gameLocal.time > nextAttackTime && wsfl.attack ) {
+				//if ( AmmoInClip ( ) == 0 )
+				//{
+					//AddToClip ( ClipSize() );
+				//}
+				//SetRocketState ( "Rocket_Idle", 0 );
+				//return SRESULT_DONE;
+			//}
+			
 			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
 rvWeaponRocketLauncher::Frame_AddToClip
 ================
-*/
+
 stateResult_t rvWeaponRocketLauncher::Frame_AddToClip ( const stateParms_t& parms ) {
 	AddToClip ( 1 );
 	return SRESULT_OK;
 }
-
+*/

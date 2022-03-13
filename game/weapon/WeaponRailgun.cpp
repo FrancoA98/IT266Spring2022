@@ -23,6 +23,8 @@ public:
 
 protected:
 	jointHandle_t			jointBatteryView;
+	float					range;
+	void					Attack				( void );
 
 private:
 
@@ -53,7 +55,8 @@ rvWeaponRailgun::Spawn
 ================
 */
 void rvWeaponRailgun::Spawn ( void ) {
-	SetState ( "Raise", 0 );	
+	SetState ( "Raise", 0 );
+	range = spawnArgs.GetFloat("range", "32");//MOD1 ADDED: Defined variable for range calculation
 }
 
 /*
@@ -114,6 +117,34 @@ void rvWeaponRailgun::Think ( void ) {
 	}
 }
 
+
+void rvWeaponRailgun::Attack( void ) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t	tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+}
+
 /*
 ===============================================================================
 
@@ -125,7 +156,7 @@ void rvWeaponRailgun::Think ( void ) {
 CLASS_STATES_DECLARATION ( rvWeaponRailgun )
 	STATE ( "Idle",				rvWeaponRailgun::State_Idle)
 	STATE ( "Fire",				rvWeaponRailgun::State_Fire )
-	STATE ( "Reload",			rvWeaponRailgun::State_Reload )
+	//STATE ( "Reload",			rvWeaponRailgun::State_Reload )
 END_CLASS_STATES
 
 /*
@@ -140,6 +171,8 @@ stateResult_t rvWeaponRailgun::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+			//ORIGINAL
+			/*
 			if ( !AmmoAvailable ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
@@ -149,8 +182,16 @@ stateResult_t rvWeaponRailgun::State_Idle( const stateParms_t& parms ) {
 			}
 			PlayCycle( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
 			return SRESULT_STAGE ( STAGE_WAIT );
-		
-		case STAGE_WAIT:			
+			*/
+
+			//MOD1
+			SetStatus(WP_READY);
+			PlayCycle(ANIMCHANNEL_ALL, "idle", parms.blendFrames);
+			return SRESULT_STAGE(STAGE_WAIT);
+
+		case STAGE_WAIT:
+			//ORIGINAL
+			/*
 			if ( wsfl.lowerWeapon ) {
 				StopSound( SND_CHANNEL_BODY2, false );
 				SetState ( "Lower", 4 );
@@ -170,6 +211,17 @@ stateResult_t rvWeaponRailgun::State_Idle( const stateParms_t& parms ) {
 				return SRESULT_DONE;			
 			}
 			return SRESULT_WAIT;
+			*/
+
+			//MOD1
+			if (wsfl.lowerWeapon) {
+				SetState("Lower", 4);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack) {
+				SetState("Fire", 0);
+			}
+			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
 }
@@ -187,7 +239,8 @@ stateResult_t rvWeaponRailgun::State_Fire ( const stateParms_t& parms ) {
 	switch ( parms.stage ) {
 		case STAGE_INIT:
 			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-			Attack ( false, 1, spread, 0, 1.0f );
+			//Attack ( false, 1, spread, 0, 1.0f );
+			Attack ( ); //MOD1: attack function
 			PlayAnim ( ANIMCHANNEL_ALL, "fire", 0 );	
 			return SRESULT_STAGE ( STAGE_WAIT );
 	
@@ -202,12 +255,12 @@ stateResult_t rvWeaponRailgun::State_Fire ( const stateParms_t& parms ) {
 	return SRESULT_ERROR;
 }
 
-
+//ORIGINAL State_Reload
 /*
 ================
 rvWeaponRailgun::State_Reload
 ================
-*/
+
 stateResult_t rvWeaponRailgun::State_Reload ( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -240,6 +293,7 @@ stateResult_t rvWeaponRailgun::State_Reload ( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ===============================================================================
@@ -251,7 +305,7 @@ stateResult_t rvWeaponRailgun::State_Reload ( const stateParms_t& parms ) {
 
 /*
 ================
-rvWeaponRailgun::State_Reload
+rvWeaponRailgun::Event_RestoreHum
 ================
 */
 void rvWeaponRailgun::Event_RestoreHum ( void ) {

@@ -21,40 +21,43 @@ public:
 	~WeaponNapalmGun ( void );
 
 	virtual void			Spawn				( void );
-	virtual void			Think				( void );
-	virtual void			MuzzleRise			( idVec3 &origin, idMat3 &axis );
+	//virtual void			Think				( void );
+	//virtual void			MuzzleRise			( idVec3 &origin, idMat3 &axis );
 
-	virtual void			SpectatorCycle		( void );
+	//virtual void			SpectatorCycle		( void );
 
 	void					Save( idSaveGame *saveFile ) const;
 	void					Restore( idRestoreGame *saveFile );
 
 protected:
 
-	void					UpdateCylinders(void);
+	//void					UpdateCylinders(void);
 	
-	typedef enum {CYLINDER_RESET_POSITION,CYLINDER_MOVE_POSITION, CYLINDER_UPDATE_POSITION } CylinderState;
-	CylinderState								cylinderState;
+	//typedef enum {CYLINDER_RESET_POSITION,CYLINDER_MOVE_POSITION, CYLINDER_UPDATE_POSITION } CylinderState;
+	//CylinderState								cylinderState;
+
+	float					range;													//MOD1: range
+	void					Attack				( void);							//MOD1: Attack function
 
 private:
 
 	stateResult_t		State_Idle				( const stateParms_t& parms );
 	stateResult_t		State_Fire				( const stateParms_t& parms );
-	stateResult_t		State_Reload			( const stateParms_t& parms );
-	stateResult_t		State_EmptyReload		( const stateParms_t& parms );
+	//stateResult_t		State_Reload			( const stateParms_t& parms );
+	//stateResult_t		State_EmptyReload		( const stateParms_t& parms );
 	
-	stateResult_t		Frame_MoveCylinder		( const stateParms_t& parms );
-	stateResult_t		Frame_ResetCylinder		( const stateParms_t& parms );
+	//stateResult_t		Frame_MoveCylinder		( const stateParms_t& parms );
+	//stateResult_t		Frame_ResetCylinder		( const stateParms_t& parms );
 
 
-	float								cylinderMaxOffsets[NAPALM_GUN_NUM_CYLINDERS];
-	idInterpolate<float>				cylinderOffsets[NAPALM_GUN_NUM_CYLINDERS];
-	jointHandle_t						cylinderJoints[NAPALM_GUN_NUM_CYLINDERS];
+	//float								cylinderMaxOffsets[NAPALM_GUN_NUM_CYLINDERS];
+	//idInterpolate<float>				cylinderOffsets[NAPALM_GUN_NUM_CYLINDERS];
+	//jointHandle_t						cylinderJoints[NAPALM_GUN_NUM_CYLINDERS];
 
 
-	int									cylinderMoveTime;
-	int									previousAmmo;
-	bool								zoomed;
+	//int									cylinderMoveTime;
+	//int									previousAmmo;
+	//bool								zoomed;
 	
 	CLASS_STATES_PROTOTYPE ( WeaponNapalmGun );
 };
@@ -82,6 +85,8 @@ WeaponNapalmGun::Spawn
 ================
 */
 void WeaponNapalmGun::Spawn( void ) {
+	//Original code
+	/*
 	assert(viewModel);
 	idAnimator* animator = viewModel->GetAnimator();
 	assert(animator);
@@ -105,13 +110,19 @@ void WeaponNapalmGun::Spawn( void ) {
 	cylinderMoveTime  = spawnArgs.GetFloat( "cylinderMoveTime", "500" );
 	cylinderState = CYLINDER_RESET_POSITION;
 	zoomed = false;
+	*/
+
+	//MOD1
+	SetState("Raise", 0);
+	range = spawnArgs.GetFloat("range", "32"); //MOD1: range
 }
+
 
 /*
 ================
 WeaponNapalmGun::Think
 ================
-*/
+
 void WeaponNapalmGun::Think( void ) {
 
 	rvWeapon::Think();
@@ -129,24 +140,26 @@ void WeaponNapalmGun::Think( void ) {
 
 	UpdateCylinders();
 }
+*/
 
 /*
 ===============
 WeaponNapalmGun::MuzzleRise
 ===============
-*/
+
 void WeaponNapalmGun::MuzzleRise( idVec3 &origin, idMat3 &axis ) {
 	if ( wsfl.zoom )
 		return;
 
 	rvWeapon::MuzzleRise( origin, axis );
 }
+*/
 
 /*
 ===============
 WeaponNapalmGun::UpdateCylinders
 ===============
-*/
+
 void WeaponNapalmGun::UpdateCylinders(void)
 {
 	idAnimator* animator;
@@ -189,6 +202,7 @@ void WeaponNapalmGun::UpdateCylinders(void)
 
 	cylinderState = CYLINDER_UPDATE_POSITION;
 }
+*/
 
 
 /*
@@ -198,6 +212,8 @@ WeaponNapalmGun::Save
 */
 void WeaponNapalmGun::Save( idSaveGame *saveFile ) const 
 {
+	//Original Code
+	/*
 	for(int i = 0; i < NAPALM_GUN_NUM_CYLINDERS; i++)
 	{
 		saveFile->WriteFloat(cylinderMaxOffsets[i]);
@@ -207,6 +223,10 @@ void WeaponNapalmGun::Save( idSaveGame *saveFile ) const
 
 	saveFile->WriteInt(cylinderMoveTime);
 	saveFile->WriteInt(previousAmmo);
+	*/
+
+	//MOD1
+	saveFile->WriteFloat(range); //MOD1: 
 }
 
 /*
@@ -215,7 +235,8 @@ WeaponNapalmGun::Restore
 =====================
 */
 void WeaponNapalmGun::Restore( idRestoreGame *saveFile ) {
-	
+	//Original
+	/*
 	for(int i = 0; i < NAPALM_GUN_NUM_CYLINDERS; i++)
 	{
 		saveFile->ReadFloat(cylinderMaxOffsets[i]);
@@ -225,6 +246,39 @@ void WeaponNapalmGun::Restore( idRestoreGame *saveFile ) {
 
 	saveFile->ReadInt(cylinderMoveTime);
 	saveFile->ReadInt(previousAmmo);
+	*/
+
+	//MOD1
+	saveFile->ReadFloat(range);
+}
+
+void WeaponNapalmGun::Attack( void ) {
+	gameLocal.Printf("Inside Attack function\n");
+	//MOD1 ADDED START
+	trace_t	tr; //Trace involved in damage application
+	idEntity* ent; //Involved in damage application
+	gameLocal.TracePoint(owner, tr,
+		playerViewOrigin,
+		playerViewOrigin + playerViewAxis[0] * range,
+		MASK_SHOT_RENDERMODEL, owner);
+
+	owner->WeaponFireFeedback(&weaponDef->dict);//I know this looks for something in the def file
+	ent = gameLocal.entities[tr.c.entityNum];//Defines the entity?
+	//MOD1 ADDED END
+
+	//MOD1 ADDED: Applying damage to entity
+	//If we are allowed to attack
+	gameLocal.Printf("Apply Damage!\n");
+	if (ent) {//If the entity was defined
+		gameLocal.Printf("Recognized entity");
+		if (ent->fl.takedamage) {//If the entity can be damaged
+			gameLocal.Printf("Entity taking damage");
+			float dmgScale = 1.0f;
+			ent->Damage(owner, owner, playerViewAxis[0], spawnArgs.GetString("def_damage"), dmgScale, 0);//Here spawnArgs seems to take from def file
+		}
+	}
+
+
 }
 
 /*
@@ -238,13 +292,17 @@ void WeaponNapalmGun::Restore( idRestoreGame *saveFile ) {
 CLASS_STATES_DECLARATION ( WeaponNapalmGun )
 	STATE ( "Idle",				WeaponNapalmGun::State_Idle)
 	STATE ( "Fire",				WeaponNapalmGun::State_Fire )
-	STATE ( "Reload",			WeaponNapalmGun::State_Reload )
-	STATE ( "EmptyReload",		WeaponNapalmGun::State_EmptyReload )
-	STATE ( "MoveCylinder",		WeaponNapalmGun::Frame_MoveCylinder )
-	STATE ( "ResetCylinder",	WeaponNapalmGun::Frame_ResetCylinder)
+	//STATE ( "Reload",			WeaponNapalmGun::State_Reload )
+	//STATE ( "EmptyReload",		WeaponNapalmGun::State_EmptyReload )
+	//STATE ( "MoveCylinder",		WeaponNapalmGun::Frame_MoveCylinder )
+	//STATE ( "ResetCylinder",	WeaponNapalmGun::Frame_ResetCylinder)
 END_CLASS_STATES
 
 
+/*
+================
+rvWeaponGrenadeLauncher::State_Reload
+================
 
 stateResult_t WeaponNapalmGun::State_Reload( const stateParms_t& parms) {
 	enum {
@@ -269,12 +327,13 @@ stateResult_t WeaponNapalmGun::State_Reload( const stateParms_t& parms) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
-rvWeaponGrenadeLauncher::State_Reload
+rvWeaponGrenadeLauncher::State_EmptyReload
 ================
-*/
+
 stateResult_t WeaponNapalmGun::State_EmptyReload( const stateParms_t& parms ) {
 	enum {
 		STAGE_INIT,
@@ -309,6 +368,7 @@ stateResult_t WeaponNapalmGun::State_EmptyReload( const stateParms_t& parms ) {
 	}
 	return SRESULT_ERROR;
 }
+*/
 
 /*
 ================
@@ -322,6 +382,8 @@ stateResult_t WeaponNapalmGun::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+			//Original
+			/*
 			if ( AmmoAvailable ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
@@ -332,9 +394,18 @@ stateResult_t WeaponNapalmGun::State_Idle( const stateParms_t& parms ) {
 				PlayCycle( ANIMCHANNEL_LEGS, "altidle", parms.blendFrames );
 			else
 				PlayCycle( ANIMCHANNEL_LEGS, "idle", parms.blendFrames );
+			
 			return SRESULT_STAGE ( STAGE_WAIT );
+			*/
+
+			//MOD1
+			SetStatus(WP_READY);
+			PlayCycle(ANIMCHANNEL_ALL, "idle", parms.blendFrames); //BREAK
+			return SRESULT_STAGE(STAGE_WAIT);
 		
 		case STAGE_WAIT:
+			//Original
+			/*
 			if ( wsfl.lowerWeapon ) {
 				SetState ( "Lower", 4 );
 				return SRESULT_DONE;
@@ -377,7 +448,21 @@ stateResult_t WeaponNapalmGun::State_Idle( const stateParms_t& parms ) {
 				}
 			}
 			return SRESULT_WAIT;
+
+			*/
+
+			//MOD1
+			if (wsfl.lowerWeapon) {
+				SetState("Lower", 4);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack) {
+				SetState("Fire", 0);
+			}
+
+			return SRESULT_WAIT;
 	}
+	
 	return SRESULT_ERROR;
 }
 
@@ -395,13 +480,17 @@ stateResult_t WeaponNapalmGun::State_Fire( const stateParms_t& parms ) {
 		case STAGE_INIT:
 			if ( wsfl.zoom ) {
 				nextAttackTime = gameLocal.time + (altFireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-				Attack ( true, 1, spread, 0, 1.0f );
-				PlayAnim ( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
+				Attack( );
+				//Attack ( true, 1, spread, 0, 1.0f );
+				//PlayAnim ( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
 				//fireHeld = true;
 			} else {
 				nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
-				Attack ( false, 1, spread, 0, 1.0f );
+				Attack();
 
+				//Original Code
+				/*
+				Attack ( false, 1, spread, 0, 1.0f );
 				int animNum = viewModel->GetAnimator()->GetAnim ( "fire" );
 				if ( animNum ) {
 					idAnim* anim;
@@ -410,12 +499,17 @@ stateResult_t WeaponNapalmGun::State_Fire( const stateParms_t& parms ) {
 				}
 
 				PlayAnim ( ANIMCHANNEL_ALL, "fire", parms.blendFrames );
+				*/
 			}
+			PlayAnim(ANIMCHANNEL_ALL, "fire", parms.blendFrames);
+			return SRESULT_STAGE(STAGE_WAIT);
 
-			previousAmmo = AmmoInClip();
-			return SRESULT_STAGE ( STAGE_WAIT );
+			//previousAmmo = AmmoInClip();
+			//return SRESULT_STAGE ( STAGE_WAIT );
 	
-		case STAGE_WAIT:			
+		case STAGE_WAIT:
+			//ORIGINAL CODE
+			/*
 			if ( AnimDone ( ANIMCHANNEL_ALL, 0 ) ) {
 				if ( !wsfl.zoom ) 
 					SetState ( "Reload", 4 );
@@ -423,11 +517,24 @@ stateResult_t WeaponNapalmGun::State_Fire( const stateParms_t& parms ) {
 					SetState ( "Idle", 4 );
 				return SRESULT_DONE;
 			}
+			*/
+
+			//MOD1
+			if (wsfl.lowerWeapon || AnimDone(ANIMCHANNEL_ALL, 0)) {
+				SetState("Idle", 0);
+				return SRESULT_DONE;
+			}
+			if (wsfl.attack && gameLocal.time >= nextAttackTime) {
+				SetState("Fire", 0);
+				return SRESULT_DONE;
+			}
 			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
 }
 
+//Original Code Implementation
+/*
 stateResult_t WeaponNapalmGun::Frame_MoveCylinder( const stateParms_t& parms) {
 	cylinderState = CYLINDER_MOVE_POSITION;
 	return SRESULT_OK;
@@ -441,3 +548,5 @@ stateResult_t WeaponNapalmGun::Frame_ResetCylinder( const stateParms_t& parms) {
 void WeaponNapalmGun::SpectatorCycle( void ) {
 	cylinderState = CYLINDER_RESET_POSITION;
 }
+
+*/

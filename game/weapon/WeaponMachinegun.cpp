@@ -210,12 +210,16 @@ stateResult_t rvWeaponMachinegun::State_Idle( const stateParms_t& parms ) {
 	};	
 	switch ( parms.stage ) {
 		case STAGE_INIT:
+			//ORIGINAL CODE
+			/*
 			if ( !AmmoAvailable ( ) ) {
 				SetStatus ( WP_OUTOFAMMO );
 			} else {
 				SetStatus ( WP_READY );
 			}
+			*/
 		
+			SetStatus(WP_READY);
 			PlayCycle( ANIMCHANNEL_ALL, "idle", parms.blendFrames );
 			return SRESULT_STAGE ( STAGE_WAIT );
 		
@@ -223,11 +227,16 @@ stateResult_t rvWeaponMachinegun::State_Idle( const stateParms_t& parms ) {
 			if ( wsfl.lowerWeapon ) {
 				SetState ( "Lower", 4 );
 				return SRESULT_DONE;
-			}		
+			}
+			if (wsfl.attack) {
+				SetState("Fire", 0);
+			}
 			if ( UpdateFlashlight ( ) ) {
 				return SRESULT_DONE;
 			}
 
+			//ORIGINAL CODE
+			/*
 			if ( fireHeld && !wsfl.attack ) {
 				fireHeld = false;
 			}
@@ -250,6 +259,7 @@ stateResult_t rvWeaponMachinegun::State_Idle( const stateParms_t& parms ) {
 					return SRESULT_DONE;			
 				}				
 			}
+			*/
 			return SRESULT_WAIT;
 	}
 	return SRESULT_ERROR;
