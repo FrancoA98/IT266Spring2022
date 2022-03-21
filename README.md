@@ -4,8 +4,8 @@ This mod aims to modify the weapons into melee weapons to have melee base combat
 
 # Deliverables
 1) 10 melee weapons
-2) off-hand gun that stuns enemies
-3) blood vials and quicksilver bullets
+2) Off-hand gun that stuns enemies
+3) Blood vials and quicksilver bullets
 4) Enemies award blood echoes
 5) "Messenger" shop to buy upgrades, which allow the weapons to scale accordingly.
 
